@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spanish Voice Trainer</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+  --border: #30363d; --text: #e6edf3; --text2: #8b949e;
+  --green: #3fb950; --blue: #58a6ff; --red: #f85149;
+  --yellow: #d29922; --purple: #bc8cff;
+}
+
+body {
+  background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  min-height: 100vh; display: flex; align-items: flex-start;
+  justify-content: center; padding: 20px 0 60px;
+}
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+.container { width: 100%; max-width: 660px; padding: 0 20px; }
+
+.header { text-align: center; margin-bottom: 28px; padding-top: 12px; }
+.header h1 { font-size: 26px; font-weight: 700; }
+.header p { color: var(--text2); margin-top: 6px; font-size: 14px; }
+
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 22px; margin-bottom: 14px;
+}
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 6px; padding: 9px 18px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg3);
+  color: var(--text); font-size: 14px; cursor: pointer;
+  transition: all 0.15s; text-decoration: none; font-family: inherit;
+}
+.btn:hover { background: var(--border); }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.btn-primary { background: var(--green); border-color: var(--green); color: #000; font-weight: 600; }
+.btn-primary:hover { background: #46d058; border-color: #46d058; }
+.btn-blue { background: var(--blue); border-color: var(--blue); color: #000; font-weight: 600; }
+.btn-red { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
+.btn-lg { padding: 12px 24px; font-size: 15px; width: 100%; }
+
+input[type="password"], input[type="text"], select {
+  width: 100%; padding: 9px 12px; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 14px; outline: none;
+  transition: border-color 0.15s; font-family: inherit;
+}
+input:focus, select:focus { border-color: var(--blue); }
+label { display: block; color: var(--text2); font-size: 12px; margin-bottom: 5px; letter-spacing: 0.3px; }
+
+.status {
+  text-align: center; padding: 10px; border-radius: 8px;
+  font-size: 13px; margin: 10px 0;
+}
+.status.listening { background: rgba(88,166,255,.15); border: 1px solid rgba(88,166,255,.3); color: var(--blue); }
+.status.speaking  { background: rgba(63,185,80,.15);  border: 1px solid rgba(63,185,80,.3);  color: var(--green); }
+.status.thinking  { background: rgba(188,140,255,.15);border: 1px solid rgba(188,140,255,.3);color: var(--purple); }
+.status.hidden    { display: none; }
+
+.phrase-display { text-align: center; margin: 20px 0; }
+.phrase-display .spanish { font-size: 26px; font-weight: 700; color: var(--green); margin-bottom: 8px; }
+.phrase-display .english { font-size: 17px; color: var(--text); }
+.phrase-display .note    { font-size: 12px; color: var(--text2); margin-top: 8px; font-style: italic; }
+
+.progress-bar { height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 20px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width 0.3s; }
+.counter { text-align: center; color: var(--text2); font-size: 13px; margin-bottom: 14px; }
+
+.btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+
+.menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.menu-item {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 22px 16px; cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.menu-item:hover { border-color: var(--blue); background: var(--bg3); transform: translateY(-2px); }
+.menu-item .icon  { font-size: 30px; margin-bottom: 10px; }
+.menu-item .title { font-size: 15px; font-weight: 600; }
+.menu-item .desc  { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+.chat-log {
+  max-height: 380px; overflow-y: auto; margin-bottom: 14px;
+  display: flex; flex-direction: column; gap: 10px; padding: 2px;
+}
+.chat-msg { max-width: 82%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; }
+.chat-msg.user  { background: var(--blue); color: #000; align-self: flex-end; border-bottom-right-radius: 3px; }
+.chat-msg.sofia { background: var(--bg3); border: 1px solid var(--border); align-self: flex-start; border-bottom-left-radius: 3px; }
+.chat-msg .speaker { font-size: 10px; opacity: 0.65; margin-bottom: 3px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+.stat-card { background: var(--bg3); border-radius: 8px; padding: 14px; text-align: center; }
+.stat-card .num   { font-size: 26px; font-weight: 700; color: var(--blue); }
+.stat-card .label { font-size: 10px; color: var(--text2); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.word-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.word-table th { text-align: left; padding: 7px 10px; color: var(--text2); border-bottom: 1px solid var(--border); font-weight: 500; }
+.word-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+.word-table tr:last-child td { border-bottom: none; }
+
+.pill { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.pill.green  { background: rgba(63,185,80,.2);  color: var(--green);  }
+.pill.red    { background: rgba(248,81,73,.2);  color: var(--red);    }
+.pill.yellow { background: rgba(210,153,34,.2); color: var(--yellow); }
+
+.back-btn { color: var(--text2); font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 16px; }
+.back-btn:hover { color: var(--text); }
+
+.result-badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-weight: 700; font-size: 13px; }
+.result-badge.correct   { background: rgba(63,185,80,.2);  color: var(--green); }
+.result-badge.incorrect { background: rgba(248,81,73,.2);  color: var(--red);   }
+
+.summary-circle {
+  width: 110px; height: 110px; border-radius: 50%; border: 4px solid var(--green);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; margin: 0 auto 18px;
+}
+.summary-circle .pct   { font-size: 30px; font-weight: 700; color: var(--green); }
+.summary-circle .slabel { font-size: 11px; color: var(--text2); }
+
+.warning {
+  background: rgba(210,153,34,.1); border: 1px solid rgba(210,153,34,.3);
+  border-radius: 8px; padding: 10px 12px; font-size: 12px; color: var(--yellow); margin-bottom: 14px;
+}
+
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(88,166,255,.5); }
+  70%  { box-shadow: 0 0 0 10px rgba(88,166,255,0); }
+  100% { box-shadow: 0 0 0 0   rgba(88,166,255,0); }
+}
+.listening-pulse { animation: pulse 1.4s infinite; border-color: var(--blue) !important; background: rgba(88,166,255,.15) !important; }
+
+.mini-text { text-align: center; font-size: 13px; color: var(--text2); margin: 6px 0; min-height: 18px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ===================== SETUP ===================== -->
+<div id="screen-setup" class="screen active">
+  <div class="container">
+    <div class="header">
+      <h1>🇲🇽 Spanish Voice Trainer</h1>
+      <p>Aprende español hablando</p>
+    </div>
+    <div class="card">
+      <h2 style="font-size:17px;margin-bottom:12px;">Enter your Anthropic API Key</h2>
+      <p style="color:var(--text2);font-size:13px;margin-bottom:18px;">
+        Used for AI conversation and translation feedback. Stored locally in your browser — never sent anywhere except directly to Anthropic.
+      </p>
+      <div style="margin-bottom:14px;">
+        <label>Anthropic API Key</label>
+        <input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off">
+      </div>
+      <button class="btn btn-primary btn-lg" onclick="setupSave()">Start Training →</button>
+      <p style="margin-top:10px;font-size:11px;color:var(--text2);text-align:center;">
+        No key? Get one free at <a href="https://console.anthropic.com" target="_blank" style="color:var(--blue)">console.anthropic.com</a>
+      </p>
+    </div>
+    <div class="warning">
+      ⚠️ Speech recognition works best in <strong>Chrome or Edge</strong>. Firefox/Safari have limited mic support for this API.
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MENU ===================== -->
+<div id="screen-menu" class="screen">
+  <div class="container">
+    <div class="header">
+      <h1>🇲🇽 Spanish Voice Trainer</h1>
+      <p id="menu-subtitle" style="color:var(--text2)"></p>
+    </div>
+    <div class="menu-grid">
+      <div class="menu-item" onclick="startDrill()">
+        <div class="icon">🎧</div>
+        <div class="title">Vocabulary Drill</div>
+        <div class="desc">Listen &amp; repeat Spanish phrases</div>
+      </div>
+      <div class="menu-item" onclick="startTranslate()">
+        <div class="icon">🔄</div>
+        <div class="title">Translation Challenge</div>
+        <div class="desc">English → Spanish speaking</div>
+      </div>
+      <div class="menu-item" onclick="startConvo()">
+        <div class="icon">💬</div>
+        <div class="title">Chat with Sofía</div>
+        <div class="desc">Free Spanish conversation</div>
+      </div>
+      <div class="menu-item" onclick="showProgress()">
+        <div class="icon">📊</div>
+        <div class="title">Progress</div>
+        <div class="desc">Stats &amp; spaced repetition</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:18px;">
+      <span style="color:var(--text2);font-size:12px;cursor:pointer;" onclick="resetKey()">Change API key</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== DRILL ===================== -->
+<div id="screen-drill" class="screen">
+  <div class="container">
+    <span class="back-btn" onclick="showMenu()">← Back</span>
+    <div class="header">
+      <h1>🎧 Vocabulary Drill</h1>
+      <p>Listen to Spanish, then repeat it</p>
+    </div>
+
+    <div id="drill-setup" class="card">
+      <label>How many words?</label>
+      <select id="drill-count" style="margin-bottom:14px;">
+        <option value="5">5 words</option>
+        <option value="10" selected>10 words</option>
+        <option value="20">20 words</option>
+        <option value="30">30 words</option>
+      </select>
+      <button class="btn btn-primary btn-lg" onclick="drillStart()">Start Drill →</button>
+    </div>
+
+    <div id="drill-active" style="display:none;">
+      <div class="progress-bar"><div class="progress-bar-fill" id="drill-pfill" style="width:0%"></div></div>
+      <div class="counter" id="drill-counter"></div>
+      <div class="card">
+        <div class="phrase-display">
+          <div class="english" id="drill-english"></div>
+          <div class="spanish" id="drill-spanish" style="margin-top:14px;display:none;"></div>
+          <div class="note" id="drill-note"></div>
+        </div>
+        <div id="drill-status" class="status hidden"></div>
+        <div class="mini-text" id="drill-heard"></div>
+        <div style="text-align:center;min-height:22px;margin:4px 0;" id="drill-result"></div>
+        <div class="btn-row">
+          <button class="btn btn-blue" id="drill-btn-hear" onclick="drillHear()">🔊 Hear Spanish</button>
+          <button class="btn" id="drill-btn-speak" onclick="drillSpeak()" disabled>🎤 Repeat</button>
+        </div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn btn-primary" id="drill-btn-next" onclick="drillNext()" style="display:none;">Next →</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="drill-summary" style="display:none;" class="card">
+      <div class="summary-circle" id="drill-summary-circle">
+        <div class="pct" id="drill-summary-pct"></div>
+        <div class="slabel">correct</div>
+      </div>
+      <p style="text-align:center;color:var(--text2);font-size:14px;" id="drill-summary-msg"></p>
+      <div class="btn-row" style="margin-top:20px;">
+        <button class="btn btn-primary" onclick="drillRestart()">Practice Again</button>
+        <button class="btn" onclick="showMenu()">Main Menu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TRANSLATE ===================== -->
+<div id="screen-translate" class="screen">
+  <div class="container">
+    <span class="back-btn" onclick="showMenu()">← Back</span>
+    <div class="header">
+      <h1>🔄 Translation Challenge</h1>
+      <p>Hear English, say it in Spanish</p>
+    </div>
+
+    <div id="trans-setup" class="card">
+      <label>How many phrases?</label>
+      <select id="trans-count" style="margin-bottom:14px;">
+        <option value="5">5 phrases</option>
+        <option value="10" selected>10 phrases</option>
+        <option value="20">20 phrases</option>
+      </select>
+      <button class="btn btn-primary btn-lg" onclick="transStart()">Start Challenge →</button>
+    </div>
+
+    <div id="trans-active" style="display:none;">
+      <div class="progress-bar"><div class="progress-bar-fill" id="trans-pfill" style="width:0%"></div></div>
+      <div class="counter" id="trans-counter"></div>
+      <div class="card">
+        <div class="phrase-display">
+          <div class="english" id="trans-english" style="font-size:20px;"></div>
+          <div class="spanish" id="trans-answer" style="margin-top:14px;display:none;font-size:20px;"></div>
+        </div>
+        <div id="trans-status" class="status hidden"></div>
+        <div class="mini-text" id="trans-heard"></div>
+        <div style="text-align:center;min-height:22px;margin:4px 0;" id="trans-result"></div>
+        <div class="mini-text" id="trans-feedback" style="font-style:italic;color:var(--purple);"></div>
+        <div class="btn-row">
+          <button class="btn btn-blue" id="trans-btn-hear" onclick="transHear()">🔊 Hear Phrase</button>
+          <button class="btn" id="trans-btn-speak" onclick="transSpeak()" disabled>🎤 Say in Spanish</button>
+        </div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn btn-primary" id="trans-btn-next" onclick="transNext()" style="display:none;">Next →</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="trans-summary" style="display:none;" class="card">
+      <div class="summary-circle" id="trans-summary-circle">
+        <div class="pct" id="trans-summary-pct"></div>
+        <div class="slabel">correct</div>
+      </div>
+      <p style="text-align:center;color:var(--text2);font-size:14px;" id="trans-summary-msg"></p>
+      <div class="btn-row" style="margin-top:20px;">
+        <button class="btn btn-primary" onclick="transRestart()">Practice Again</button>
+        <button class="btn" onclick="showMenu()">Main Menu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CONVERSATION ===================== -->
+<div id="screen-convo" class="screen">
+  <div class="container">
+    <span class="back-btn" onclick="convoEnd()">← End &amp; Back</span>
+    <div class="header">
+      <h1>💬 Chat with Sofía</h1>
+      <p>Free conversation in Spanish</p>
+    </div>
+    <div class="card" style="padding:16px;">
+      <div class="chat-log" id="chat-log"></div>
+      <div id="convo-status" class="status hidden"></div>
+      <div class="mini-text" id="convo-heard"></div>
+      <div class="btn-row">
+        <button class="btn btn-blue btn-lg" id="convo-btn-speak" onclick="convoSpeak()" disabled>🎤 Speak</button>
+        <button class="btn btn-red" onclick="convoEnd()">End Session</button>
+      </div>
+      <p style="text-align:center;font-size:11px;color:var(--text2);margin-top:8px;">Say "salir" or "exit" to end</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== PROGRESS ===================== -->
+<div id="screen-progress" class="screen">
+  <div class="container">
+    <span class="back-btn" onclick="showMenu()">← Back</span>
+    <div class="header"><h1>📊 Your Progress</h1></div>
+    <div id="progress-content"></div>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<script>
+// ─────────────────────────────────────────────
+// VOCABULARY
+// ─────────────────────────────────────────────
+const VOCABULARY = [
+  // Greetings
+  {s:"¿Qué onda?",            e:"What's up? / What's going on?",              c:"greetings", n:"Very common in Mexico, informal"},
+  {s:"¿Qué tal?",             e:"How's it going?",                             c:"greetings", n:"Common across all Spanish-speaking countries"},
+  {s:"¿Todo bien?",           e:"Everything good? / All good?",                c:"greetings", n:"Often answered with 'Todo bien' or 'Más o menos'"},
+  {s:"Más o menos",           e:"More or less / So-so",                        c:"greetings", n:"Universal response when things are okay but not great"},
+  {s:"¡Qué buena onda!",      e:"What good vibes! / That's so cool!",          c:"greetings", n:"Mexico; also 'You're so cool/chill'"},
+  {s:"¿De dónde eres?",       e:"Where are you from?",                         c:"greetings", n:"Essential conversation opener"},
+  {s:"¿A qué te dedicas?",    e:"What do you do for work?",                    c:"greetings", n:"More natural than '¿Cuál es tu trabajo?'"},
+  {s:"Estoy aprendiendo español", e:"I'm learning Spanish",                    c:"greetings", n:"Say this and people will be patient"},
+  {s:"Habla más despacio, por favor", e:"Speak more slowly, please",           c:"greetings", n:"Critical phrase for beginners"},
+  {s:"¿Cómo se dice...?",     e:"How do you say...?",                          c:"greetings", n:"Fill in the blank"},
+  {s:"No entiendo",           e:"I don't understand",                           c:"greetings", n:""},
+  {s:"¿Puedes repetir?",      e:"Can you repeat that?",                        c:"greetings", n:""},
+  {s:"¡Hasta luego!",         e:"See you later! / Goodbye!",                   c:"greetings", n:""},
+  {s:"¡Nos vemos!",           e:"See you! / See you around!",                  c:"greetings", n:"Very casual, common among friends"},
+  {s:"¡Cuídate!",             e:"Take care!",                                   c:"greetings", n:"Warm send-off"},
+  {s:"Mucho gusto",           e:"Nice to meet you",                             c:"greetings", n:""},
+  {s:"¿Hablas inglés?",       e:"Do you speak English?",                       c:"greetings", n:"Last resort phrase"},
+  // Food
+  {s:"¿Me puede traer la carta?",    e:"Can you bring me the menu?",           c:"food", n:"Polite restaurant request"},
+  {s:"¿Qué me recomienda?",          e:"What do you recommend?",               c:"food", n:"Great for finding local favorites"},
+  {s:"Quiero pedir...",              e:"I want to order...",                    c:"food", n:"Follow with the dish name"},
+  {s:"¿Está picante?",               e:"Is it spicy?",                         c:"food", n:"Critical in Mexico!"},
+  {s:"Sin cebolla, por favor",       e:"Without onion, please",                c:"food", n:"Template: Sin [ingredient], por favor"},
+  {s:"La cuenta, por favor",         e:"The bill, please",                     c:"food", n:"Standard way to ask for the check"},
+  {s:"¿Está incluida la propina?",   e:"Is the tip included?",                 c:"food", n:"Tip customs vary by country"},
+  {s:"Está delicioso",               e:"It's delicious",                       c:"food", n:""},
+  {s:"¡Qué rico!",                   e:"How delicious! / Yummy!",              c:"food", n:"Enthusiastic reaction to good food"},
+  {s:"Soy alérgico a los mariscos",  e:"I'm allergic to seafood",              c:"food", n:"Template: Soy alérgico/a a..."},
+  {s:"¿Tiene opciones vegetarianas?",e:"Do you have vegetarian options?",      c:"food", n:""},
+  {s:"Para llevar",                  e:"To go / Takeout",                      c:"food", n:""},
+  {s:"Para comer aquí",              e:"To eat here / Dine in",                c:"food", n:""},
+  {s:"Otra cerveza, por favor",      e:"Another beer, please",                 c:"food", n:"Template: Otro/a [item], por favor"},
+  {s:"¿Me puede traer agua?",        e:"Can you bring me water?",              c:"food", n:"Ask for 'agua purificada' in Mexico"},
+  {s:"¿Qué lleva este platillo?",    e:"What's in this dish?",                 c:"food", n:"'Platillo' = dish/plate"},
+  // Directions
+  {s:"¿Cómo llego a...?",        e:"How do I get to...?",                      c:"directions", n:"Fill in with destination"},
+  {s:"¿Está lejos?",             e:"Is it far?",                               c:"directions", n:""},
+  {s:"A la derecha",             e:"To the right",                             c:"directions", n:""},
+  {s:"A la izquierda",           e:"To the left",                              c:"directions", n:""},
+  {s:"Todo recto",               e:"Straight ahead",                           c:"directions", n:"Also 'derecho' or 'recto'"},
+  {s:"En la esquina",            e:"On the corner",                            c:"directions", n:""},
+  {s:"¿Dónde está el metro?",    e:"Where is the subway / metro?",             c:"directions", n:""},
+  {s:"¿Cuánto cuesta el taxi?",  e:"How much does the taxi cost?",             c:"directions", n:"Always ask before getting in!"},
+  {s:"Lléveme a...",             e:"Take me to... (for taxis)",                c:"directions", n:"Formal command used with taxi drivers"},
+  {s:"Bájame aquí",              e:"Drop me off here / Let me off here",       c:"directions", n:"Mexico; also 'Aquí está bien'"},
+  {s:"¿A qué hora sale el autobús?", e:"What time does the bus leave?",        c:"directions", n:""},
+  {s:"¿Cuánto tarda en llegar?", e:"How long does it take to get there?",      c:"directions", n:""},
+  // Shopping
+  {s:"¿Cuánto cuesta?",           e:"How much does it cost?",                  c:"shopping", n:"Basic shopping question"},
+  {s:"¿Cuánto vale?",             e:"How much is it worth?",                   c:"shopping", n:"Slightly more casual variant"},
+  {s:"Está muy caro",             e:"It's very expensive",                     c:"shopping", n:"Starting point for bargaining"},
+  {s:"¿Me puede dar un descuento?",e:"Can you give me a discount?",            c:"shopping", n:"Worth asking at markets"},
+  {s:"¿Tiene algo más barato?",   e:"Do you have something cheaper?",          c:"shopping", n:""},
+  {s:"Solo estoy mirando",        e:"I'm just looking / Just browsing",        c:"shopping", n:"Polite way to decline pushy vendors"},
+  {s:"Me lo llevo",               e:"I'll take it",                            c:"shopping", n:""},
+  {s:"¿Acepta tarjeta?",          e:"Do you accept card?",                     c:"shopping", n:"Many smaller shops are cash only"},
+  {s:"¿Tiene cambio?",            e:"Do you have change?",                     c:"shopping", n:"Have small bills"},
+  {s:"¿Lo tienen en otro color?", e:"Do you have it in another color?",        c:"shopping", n:""},
+  // Socializing
+  {s:"¿Quieres tomar algo?",   e:"Do you want to get a drink?",                c:"socializing", n:"'Tomar algo' = have a drink"},
+  {s:"¿Vamos a bailar?",       e:"Do you want to dance? / Shall we dance?",    c:"socializing", n:""},
+  {s:"¿Dónde está la fiesta?", e:"Where is the party?",                        c:"socializing", n:""},
+  {s:"Me cae bien",            e:"I like him/her (personality) / He/she's cool",c:"socializing", n:"About personality, NOT romantic"},
+  {s:"Me cae mal",             e:"I don't like him/her / Rubs me the wrong way",c:"socializing", n:"Opposite of 'me cae bien'"},
+  {s:"¿Tienes WhatsApp?",      e:"Do you have WhatsApp?",                      c:"socializing", n:"THE messaging app in Latin America"},
+  {s:"¿Nos tomamos una foto?", e:"Should we take a photo?",                    c:"socializing", n:""},
+  {s:"Estoy con mis amigos",   e:"I'm with my friends",                        c:"socializing", n:""},
+  {s:"¿Qué planes tienes?",    e:"What are your plans? / What are you up to?", c:"socializing", n:""},
+  {s:"¡Salud!",                e:"Cheers! / To your health!",                  c:"socializing", n:"Toast when drinking"},
+  {s:"Invita la casa",         e:"It's on the house",                          c:"socializing", n:"What a bartender says"},
+  // Reactions
+  {s:"¡No manches!",    e:"No way! / Are you kidding me!",                     c:"reactions", n:"Mild expletive, very common in Mexico"},
+  {s:"¡Híjole!",        e:"Wow! / Oh my! / Gosh!",                             c:"reactions", n:"Mexico; surprise, concern, or dismay"},
+  {s:"¡Órale!",         e:"Alright! / Let's go! / Right on! / Wow!",           c:"reactions", n:"Very versatile Mexican expression"},
+  {s:"¡Qué pena!",      e:"How embarrassing! / What a shame!",                 c:"reactions", n:"'Qué pena' often means embarrassing"},
+  {s:"Me da igual",     e:"I don't care / It's all the same to me",            c:"reactions", n:"Neutral indifference; not rude"},
+  {s:"¡Qué lástima!",   e:"What a pity! / That's too bad!",                    c:"reactions", n:""},
+  {s:"Estoy harto",     e:"I'm fed up / I'm sick of it",                       c:"reactions", n:"'Harto/a' = fed up, sick and tired"},
+  {s:"¡Ándale!",        e:"Come on! / Hurry up! / That's it! / Go!",           c:"reactions", n:"Mexico; very versatile"},
+  {s:"Tengo flojera",   e:"I'm feeling lazy / I can't be bothered",            c:"reactions", n:"Mexico; 'flojera' = laziness"},
+  {s:"¡Qué suerte!",    e:"How lucky! / What luck!",                           c:"reactions", n:""},
+  {s:"¡Qué horror!",    e:"How awful! / That's terrible!",                     c:"reactions", n:""},
+  // Slang
+  {s:"¡Chale!",              e:"No way! / That sucks! / Come on!",             c:"slang", n:"Mexico; disappointment or disbelief"},
+  {s:"Buena onda",           e:"Good vibes / Cool person / Chill",             c:"slang", n:"Describes a person or situation"},
+  {s:"Mala onda",            e:"Bad vibes / Uncool / That's not cool",         c:"slang", n:"Opposite of 'buena onda'"},
+  {s:"No hay bronca",        e:"No problem / No worries / It's fine",          c:"slang", n:"Mexico; 'bronca' = problem/fight"},
+  {s:"La neta",              e:"The truth / For real / Honestly",              c:"slang", n:"Mexico; 'La neta es que...' = The truth is..."},
+  {s:"¿En serio?",           e:"Seriously? / Really? / Are you serious?",      c:"slang", n:""},
+  {s:"¡Claro que sí!",       e:"Of course! / Absolutely!",                     c:"slang", n:""},
+  {s:"¡Para nada!",          e:"Not at all! / No way!",                        c:"slang", n:""},
+  {s:"Sin duda",             e:"Without a doubt / Definitely",                 c:"slang", n:""},
+  {s:"Ahí nos vemos",        e:"See you there / See you around",               c:"slang", n:"Casual parting phrase"},
+  {s:"Que te vaya bien",     e:"I hope things go well for you / Take care",    c:"slang", n:"Warm farewell"},
+  {s:"¿Qué rollo?",          e:"What's the deal? / What's going on?",          c:"slang", n:"Mexico; 'rollo' = situation/thing"},
+  {s:"A ver",                e:"Let's see / Hmm / OK then",                    c:"slang", n:"Filler phrase; buys time while thinking"},
+  {s:"Pues",                 e:"Well... / So... / I mean...",                  c:"slang", n:"Most common filler word in Spanish"},
+  {s:"O sea",                e:"I mean / Like / In other words",               c:"slang", n:"Like 'like' or 'I mean' in English"},
+  {s:"¡Qué chido!",          e:"How cool! / That's awesome!",                  c:"slang", n:"Mexico; very common among young people"},
+  {s:"¡Qué padre!",          e:"How cool! / That's great!",                    c:"slang", n:"Mexico; 'padre' colloquially means cool"},
+  {s:"Ya",                   e:"Already / OK / Yeah / Got it / Enough",        c:"slang", n:"Most versatile word in Spanish"},
+  {s:"¡Órale, pues!",        e:"Alright then! / OK, sure! / Let's do it!",     c:"slang", n:"Mexico; agreement/enthusiasm"},
+  {s:"Me llama la atención", e:"It catches my attention / I find it interesting",c:"slang",n:"Idiom for something that interests you"},
+  // Emergencies
+  {s:"¡Ayuda!",                 e:"Help!",                                     c:"emergencies", n:""},
+  {s:"Llame a la policía",      e:"Call the police",                           c:"emergencies", n:""},
+  {s:"Necesito un médico",      e:"I need a doctor",                           c:"emergencies", n:""},
+  {s:"Me robaron",              e:"I was robbed / They robbed me",             c:"emergencies", n:""},
+  {s:"Estoy perdido",           e:"I'm lost",                                  c:"emergencies", n:"'Perdido/a' for male/female"},
+  {s:"¿Dónde está el hospital?",e:"Where is the hospital?",                    c:"emergencies", n:""},
+  // Practical
+  {s:"¿Tiene wifi?",             e:"Do you have wifi?",                        c:"practical", n:"Pronounced 'wee-fee' in Spanish"},
+  {s:"¿Cuál es la contraseña?",  e:"What's the password?",                    c:"practical", n:"'Contraseña' = password"},
+  {s:"¿Dónde está el baño?",     e:"Where is the bathroom?",                  c:"practical", n:"Essential travel phrase"},
+  {s:"¿A qué hora abren?",       e:"What time do you open?",                  c:"practical", n:""},
+  {s:"¿A qué hora cierran?",     e:"What time do you close?",                 c:"practical", n:""},
+  {s:"Permiso",                  e:"Excuse me (to pass) / May I?",             c:"practical", n:"When squeezing past people"},
+  {s:"Con permiso",              e:"Excuse me / Pardon me (when passing)",     c:"practical", n:""},
+  {s:"Disculpe",                 e:"Excuse me (to get attention) / Sorry",     c:"practical", n:"To get a waiter's attention"},
+  {s:"¿Me puede ayudar?",        e:"Can you help me?",                         c:"practical", n:""},
+  {s:"No sé",                    e:"I don't know",                             c:"practical", n:""},
+  {s:"Un momento, por favor",    e:"One moment, please",                       c:"practical", n:""},
+];
+
+const SYSTEM_PROMPT = `You are a friendly Spanish conversation partner helping someone learn conversational Spanish. Your name is Sofía.
+
+Rules:
+- ALWAYS respond in Spanish, no matter what the user says
+- Use natural, colloquial Spanish - not textbook Spanish
+- Keep responses SHORT (1-3 sentences) so they are easy to understand
+- If the user makes a grammar mistake, gently correct it by using the correct form naturally in your response
+- If the user writes in English, respond in Spanish and kindly note "En español, por favor :)"
+- Use common filler words naturally: bueno, pues, mira, oye, a ver...
+- Be warm, encouraging, and fun. Use expressions like ¡Qué bueno!, ¡Órale!, ¡Qué chido!
+- Occasionally ask short follow-up questions to keep the conversation flowing
+- If the user seems stuck, gently offer a hint in simpler Spanish`;
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let apiKey = '';
+let drillWords = [], drillIdx = 0, drillCorrect = 0;
+let transWords = [], transIdx = 0,  transCorrect = 0;
+let convoHistory = [];
+
+// ─────────────────────────────────────────────
+// PROGRESS (localStorage — spaced repetition)
+// ─────────────────────────────────────────────
+const PKEY = 'spanish_trainer_v2';
+const MAX_DAYS = 30;
+
+function loadProg() {
+  try { return JSON.parse(localStorage.getItem(PKEY)) || {words:{}}; }
+  catch { return {words:{}}; }
+}
+function saveProg(d) { localStorage.setItem(PKEY, JSON.stringify(d)); }
+
+function recordAttempt(spanish, success) {
+  const d = loadProg(); const now = Date.now();
+  if (!d.words[spanish]) d.words[spanish] = {attempts:0,successes:0,intervalDays:1,nextReview:now};
+  const w = d.words[spanish];
+  w.attempts++; if (success) w.successes++;
+  w.intervalDays = success ? Math.min(w.intervalDays * 2, MAX_DAYS) : 1;
+  w.nextReview = now + w.intervalDays * 86400000;
+  saveProg(d);
+}
+
+function getDueWords(limit) {
+  const d = loadProg(); const now = Date.now();
+  const fresh = [], due = [];
+  for (const item of VOCABULARY) {
+    const w = d.words[item.s];
+    if (!w) { fresh.push(item); continue; }
+    if (w.nextReview <= now) due.push([w.nextReview, item]);
+  }
+  due.sort((a,b) => a[0]-b[0]);
+  // shuffle fresh for variety
+  for (let i = fresh.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [fresh[i],fresh[j]] = [fresh[j],fresh[i]];
+  }
+  return [...fresh, ...due.map(([,x])=>x)].slice(0, limit);
+}
+
+// ─────────────────────────────────────────────
+// SPEECH SYNTHESIS
+// ─────────────────────────────────────────────
+function speak(text, lang='es-MX') {
+  return new Promise(res => {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang;
+    u.rate = lang.startsWith('es') ? 0.88 : 1.0;
+    u.onend = res; u.onerror = res;
+    window.speechSynthesis.speak(u);
+  });
+}
+const speakES = t => speak(t, 'es-MX');
+const speakEN = t => speak(t, 'en-US');
+
+// ─────────────────────────────────────────────
+// SPEECH RECOGNITION
+// ─────────────────────────────────────────────
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function listen(lang='es-MX', timeout=7000) {
+  return new Promise(res => {
+    if (!SpeechRec) { res(null); return; }
+    const r = new SpeechRec();
+    r.lang = lang; r.interimResults = false; r.maxAlternatives = 3;
+    let done = false;
+    const t = setTimeout(() => { if (!done) { done=true; r.stop(); res(null); } }, timeout);
+    r.onresult = e => { if (!done) { done=true; clearTimeout(t); res(e.results[0][0].transcript); } };
+    r.onerror  = () => { if (!done) { done=true; clearTimeout(t); res(null); } };
+    r.onend    = () => { if (!done) { done=true; clearTimeout(t); res(null); } };
+    r.start();
+  });
+}
+
+// ─────────────────────────────────────────────
+// FUZZY MATCH
+// ─────────────────────────────────────────────
+function norm(t) {
+  return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,'').trim();
+}
+function similarity(a, b) {
+  const s1=norm(a), s2=norm(b);
+  if (s1===s2) return 1;
+  const L=s1.length, Lb=s2.length;
+  if (!L||!Lb) return 0;
+  const m=[];
+  for (let i=0;i<=L;i++) { m[i]=[i]; }
+  for (let j=0;j<=Lb;j++) m[0][j]=j;
+  for (let i=1;i<=L;i++) for (let j=1;j<=Lb;j++) {
+    m[i][j] = s1[i-1]===s2[j-1] ? m[i-1][j-1] : 1+Math.min(m[i-1][j],m[i][j-1],m[i-1][j-1]);
+  }
+  return 1 - m[L][Lb] / Math.max(L,Lb);
+}
+function isMatch(said, expected, thr=0.65) { return !!said && similarity(said,expected)>=thr; }
+function isExit(t) {
+  if (!t) return false;
+  return norm(t).split(' ').some(w=>['salir','exit','quit','terminar','bye','adios','stop','para'].includes(w));
+}
+
+// ─────────────────────────────────────────────
+// ANTHROPIC API
+// ─────────────────────────────────────────────
+async function callClaude(messages, system=null, maxTokens=300) {
+  const body = { model:'claude-sonnet-4-6', max_tokens:maxTokens, messages };
+  if (system) body.system = system;
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(()=>({}));
+    throw new Error(e.error?.message || `API error ${r.status}`);
+  }
+  return (await r.json()).content[0].text;
+}
+
+async function getTransFeedback(en, userES, expected) {
+  return callClaude([{role:'user',content:
+    `The user was asked to translate into Spanish:\nEnglish: "${en}"\nExpected: "${expected}"\nUser said: "${userES}"\n\nWas the user's answer correct or close enough? If yes, say '¡Correcto!' and give brief encouragement. If no, gently give the correct answer. Respond in Spanish only. 1-2 sentences.`
+  }], null, 150);
+}
+
+async function getConvoResp(hist, msg) {
+  hist.push({role:'user', content:msg});
+  if (hist.length > 20) hist.splice(0,2);
+  const r = await callClaude(hist, SYSTEM_PROMPT, 300);
+  hist.push({role:'assistant', content:r});
+  return r;
+}
+
+async function getConvoSummary(hist) {
+  if (hist.length < 2) return '¡Buen trabajo empezando a practicar! Vuelve pronto.';
+  return callClaude([...hist,{role:'user',content:'The session just ended. Give a short (2-3 sentence) encouraging summary in Spanish: topics covered, one thing done well, and encouragement to keep practicing.'}], SYSTEM_PROMPT, 150);
+}
+
+// ─────────────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function showMenu() {
+  const d = loadProg();
+  const practiced = Object.keys(d.words).length;
+  document.getElementById('menu-subtitle').textContent =
+    `${VOCABULARY.length} phrases · ${practiced} practiced`;
+  showScreen('menu');
+}
+
+function resetKey() {
+  localStorage.removeItem('spanish_api_key');
+  apiKey = '';
+  document.getElementById('api-key-input').value = '';
+  showScreen('setup');
+}
+
+// ─────────────────────────────────────────────
+// SETUP
+// ─────────────────────────────────────────────
+function setupSave() {
+  const k = document.getElementById('api-key-input').value.trim();
+  if (!k) { alert('Please enter your API key.'); return; }
+  apiKey = k;
+  localStorage.setItem('spanish_api_key', k);
+  showMenu();
+}
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+function setStatus(id, type, text) {
+  const el = document.getElementById(id);
+  el.className = 'status '+type; el.textContent = text;
+}
+function clearStatus(id) { document.getElementById(id).className = 'status hidden'; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ─────────────────────────────────────────────
+// VOCABULARY DRILL
+// ─────────────────────────────────────────────
+function startDrill() { showScreen('drill'); }
+
+function drillStart() {
+  const n = parseInt(document.getElementById('drill-count').value);
+  drillWords = getDueWords(n);
+  if (!drillWords.length) { alert('No words due! Come back tomorrow or try a larger set.'); return; }
+  drillIdx = 0; drillCorrect = 0;
+  document.getElementById('drill-setup').style.display = 'none';
+  document.getElementById('drill-active').style.display = 'block';
+  document.getElementById('drill-summary').style.display = 'none';
+  drillShow();
+}
+
+function drillShow() {
+  const w = drillWords[drillIdx];
+  document.getElementById('drill-pfill').style.width = (drillIdx/drillWords.length*100)+'%';
+  document.getElementById('drill-counter').textContent = `${drillIdx+1} / ${drillWords.length}`;
+  document.getElementById('drill-english').textContent = w.e;
+  const sp = document.getElementById('drill-spanish');
+  sp.style.display = 'none'; sp.textContent = w.s;
+  document.getElementById('drill-note').textContent = w.n ? '💡 '+w.n : '';
+  document.getElementById('drill-status').className = 'status hidden';
+  document.getElementById('drill-heard').textContent = '';
+  document.getElementById('drill-result').innerHTML = '';
+  document.getElementById('drill-btn-hear').disabled = false;
+  document.getElementById('drill-btn-hear').textContent = '🔊 Hear Spanish';
+  document.getElementById('drill-btn-speak').disabled = true;
+  document.getElementById('drill-btn-next').style.display = 'none';
+}
+
+async function drillHear() {
+  const w = drillWords[drillIdx];
+  document.getElementById('drill-btn-hear').disabled = true;
+  setStatus('drill-status','speaking','🔊 Speaking...');
+  await speakES(w.s);
+  clearStatus('drill-status');
+  document.getElementById('drill-spanish').style.display = 'block';
+  document.getElementById('drill-btn-speak').disabled = false;
+  document.getElementById('drill-btn-hear').disabled = false;
+  document.getElementById('drill-btn-hear').textContent = '🔊 Hear Again';
+}
+
+async function drillSpeak() {
+  document.getElementById('drill-btn-speak').disabled = true;
+  document.getElementById('drill-btn-hear').disabled = true;
+  setStatus('drill-status','listening','🎤 Listening...');
+  document.getElementById('drill-btn-speak').classList.add('listening-pulse');
+  const heard = await listen('es-MX');
+  document.getElementById('drill-btn-speak').classList.remove('listening-pulse');
+  clearStatus('drill-status');
+  const w = drillWords[drillIdx];
+  document.getElementById('drill-heard').textContent = heard ? `You said: "${heard}"` : 'No speech detected.';
+  const ok = isMatch(heard, w.s);
+  recordAttempt(w.s, ok);
+  if (ok) drillCorrect++;
+  document.getElementById('drill-result').innerHTML = ok
+    ? '<span class="result-badge correct">✓ ¡Correcto!</span>'
+    : `<span class="result-badge incorrect">✗ Answer: ${esc(w.s)}</span>`;
+  if (ok) await speakEN('Great job!');
+  else { await speakEN('Not quite.'); await speakES(w.s); }
+  document.getElementById('drill-btn-next').style.display = 'inline-flex';
+  document.getElementById('drill-btn-hear').disabled = false;
+}
+
+function drillNext() {
+  drillIdx++;
+  if (drillIdx >= drillWords.length) { drillSummary(); return; }
+  drillShow();
+}
+
+function drillSummary() {
+  document.getElementById('drill-active').style.display = 'none';
+  document.getElementById('drill-summary').style.display = 'block';
+  const pct = Math.round(drillCorrect/drillWords.length*100);
+  const c = document.getElementById('drill-summary-circle');
+  const col = pct>=70?'var(--green)':pct>=50?'var(--yellow)':'var(--red)';
+  c.style.borderColor = col;
+  document.getElementById('drill-summary-pct').style.color = col;
+  document.getElementById('drill-summary-pct').textContent = pct+'%';
+  document.getElementById('drill-summary-msg').textContent =
+    `${drillCorrect} of ${drillWords.length} correct. ${pct>=80?'¡Excelente!':pct>=60?'¡Bien hecho!':'Keep practicing!'}`;
+}
+
+function drillRestart() {
+  document.getElementById('drill-active').style.display='none';
+  document.getElementById('drill-summary').style.display='none';
+  document.getElementById('drill-setup').style.display='block';
+}
+
+// ─────────────────────────────────────────────
+// TRANSLATION CHALLENGE
+// ─────────────────────────────────────────────
+function startTranslate() { showScreen('translate'); }
+
+function transStart() {
+  const n = parseInt(document.getElementById('trans-count').value);
+  transWords = getDueWords(n);
+  if (!transWords.length) { alert('No phrases due! Come back tomorrow.'); return; }
+  transIdx = 0; transCorrect = 0;
+  document.getElementById('trans-setup').style.display = 'none';
+  document.getElementById('trans-active').style.display = 'block';
+  document.getElementById('trans-summary').style.display = 'none';
+  transShow();
+}
+
+function transShow() {
+  const p = transWords[transIdx];
+  document.getElementById('trans-pfill').style.width = (transIdx/transWords.length*100)+'%';
+  document.getElementById('trans-counter').textContent = `${transIdx+1} / ${transWords.length}`;
+  document.getElementById('trans-english').textContent = p.e;
+  const ans = document.getElementById('trans-answer');
+  ans.style.display='none'; ans.textContent = p.s;
+  document.getElementById('trans-status').className='status hidden';
+  document.getElementById('trans-heard').textContent='';
+  document.getElementById('trans-result').innerHTML='';
+  document.getElementById('trans-feedback').textContent='';
+  document.getElementById('trans-btn-hear').disabled=false;
+  document.getElementById('trans-btn-speak').disabled=true;
+  document.getElementById('trans-btn-next').style.display='none';
+}
+
+async function transHear() {
+  document.getElementById('trans-btn-hear').disabled=true;
+  setStatus('trans-status','speaking','🔊 Speaking...');
+  await speakEN(transWords[transIdx].e);
+  clearStatus('trans-status');
+  document.getElementById('trans-btn-speak').disabled=false;
+  document.getElementById('trans-btn-hear').disabled=false;
+}
+
+async function transSpeak() {
+  document.getElementById('trans-btn-speak').disabled=true;
+  document.getElementById('trans-btn-hear').disabled=true;
+  setStatus('trans-status','listening','🎤 Listening for Spanish...');
+  document.getElementById('trans-btn-speak').classList.add('listening-pulse');
+  const heard = await listen('es-MX');
+  document.getElementById('trans-btn-speak').classList.remove('listening-pulse');
+  clearStatus('trans-status');
+
+  const p = transWords[transIdx];
+  document.getElementById('trans-heard').textContent = heard ? `You said: "${heard}"` : 'No speech detected.';
+  document.getElementById('trans-answer').style.display='block';
+
+  const ratio = heard ? similarity(heard, p.s) : 0;
+
+  if (ratio >= 0.70) {
+    recordAttempt(p.s, true); transCorrect++;
+    document.getElementById('trans-result').innerHTML='<span class="result-badge correct">✓ ¡Correcto!</span>';
+    await speakEN('Correct!'); await speakES('¡Correcto! '+p.s);
+    document.getElementById('trans-btn-next').style.display='inline-flex';
+    document.getElementById('trans-btn-hear').disabled=false;
+  } else if (ratio >= 0.35 && heard) {
+    setStatus('trans-status','thinking','🤔 Checking with AI...');
+    try {
+      const fb = await getTransFeedback(p.e, heard, p.s);
+      clearStatus('trans-status');
+      document.getElementById('trans-feedback').textContent = fb;
+      const ok = /correcto|muy bien|exacto|perfecto|excelente/i.test(fb);
+      recordAttempt(p.s, ok); if (ok) transCorrect++;
+      document.getElementById('trans-result').innerHTML = ok
+        ? '<span class="result-badge correct">✓ Accepted</span>'
+        : '<span class="result-badge incorrect">✗ Not quite</span>';
+      await speakES(fb);
+    } catch(err) {
+      clearStatus('trans-status');
+      document.getElementById('trans-feedback').textContent = 'AI unavailable: '+err.message;
+      recordAttempt(p.s, false);
+    }
+    document.getElementById('trans-btn-next').style.display='inline-flex';
+    document.getElementById('trans-btn-hear').disabled=false;
+  } else {
+    recordAttempt(p.s, false);
+    document.getElementById('trans-result').innerHTML=`<span class="result-badge incorrect">✗ Answer: ${esc(p.s)}</span>`;
+    await speakEN('The answer is:'); await speakES(p.s);
+    document.getElementById('trans-btn-next').style.display='inline-flex';
+    document.getElementById('trans-btn-hear').disabled=false;
+  }
+}
+
+function transNext() {
+  transIdx++;
+  if (transIdx >= transWords.length) { transSummary(); return; }
+  transShow();
+}
+
+function transSummary() {
+  document.getElementById('trans-active').style.display='none';
+  document.getElementById('trans-summary').style.display='block';
+  const pct = Math.round(transCorrect/transWords.length*100);
+  document.getElementById('trans-summary-pct').textContent = pct+'%';
+  document.getElementById('trans-summary-msg').textContent =
+    `${transCorrect} of ${transWords.length} correct. ${pct>=80?'¡Excelente!':pct>=60?'¡Bien hecho!':'Keep practicing!'}`;
+}
+
+function transRestart() {
+  document.getElementById('trans-active').style.display='none';
+  document.getElementById('trans-summary').style.display='none';
+  document.getElementById('trans-setup').style.display='block';
+}
+
+// ─────────────────────────────────────────────
+// FREE CONVERSATION
+// ─────────────────────────────────────────────
+async function startConvo() {
+  convoHistory = [];
+  showScreen('convo');
+  document.getElementById('chat-log').innerHTML='';
+  document.getElementById('convo-status').className='status hidden';
+  document.getElementById('convo-heard').textContent='';
+  document.getElementById('convo-btn-speak').disabled=true;
+  const greeting = '¡Hola! Soy Sofía, tu compañera de conversación. ¿De qué quieres hablar hoy?';
+  convoHistory.push({role:'assistant', content:greeting});
+  addMsg('sofia', greeting, 'Sofía 🇲🇽');
+  setStatus('convo-status','speaking','🔊 Speaking...');
+  await speakES(greeting);
+  clearStatus('convo-status');
+  document.getElementById('convo-btn-speak').disabled=false;
+}
+
+async function convoSpeak() {
+  document.getElementById('convo-btn-speak').disabled=true;
+  setStatus('convo-status','listening','🎤 Listening...');
+  document.getElementById('convo-btn-speak').classList.add('listening-pulse');
+  const heard = await listen('es-MX', 8000);
+  document.getElementById('convo-btn-speak').classList.remove('listening-pulse');
+
+  if (!heard) {
+    clearStatus('convo-status');
+    document.getElementById('convo-heard').textContent = 'No speech detected — try again.';
+    document.getElementById('convo-btn-speak').disabled=false;
+    return;
+  }
+  document.getElementById('convo-heard').textContent='';
+  addMsg('user', heard, 'You');
+
+  if (isExit(heard)) { await convoEnd(); return; }
+
+  setStatus('convo-status','thinking','🤔 Sofía is thinking...');
+  try {
+    const resp = await getConvoResp(convoHistory, heard);
+    clearStatus('convo-status');
+    addMsg('sofia', resp, 'Sofía 🇲🇽');
+    setStatus('convo-status','speaking','🔊 Speaking...');
+    await speakES(resp);
+    clearStatus('convo-status');
+  } catch(err) {
+    clearStatus('convo-status');
+    addMsg('sofia', `(Error: ${err.message})`, 'Sofía 🇲🇽');
+  }
+  document.getElementById('convo-btn-speak').disabled=false;
+}
+
+async function convoEnd() {
+  document.getElementById('convo-btn-speak').disabled=true;
+  if (convoHistory.length >= 2) {
+    setStatus('convo-status','thinking','🤔 Getting session summary...');
+    try {
+      const sum = await getConvoSummary(convoHistory);
+      clearStatus('convo-status');
+      addMsg('sofia', sum, 'Sofía 🇲🇽 — Session Summary');
+      setStatus('convo-status','speaking','🔊 Speaking...');
+      await speakES(sum);
+      clearStatus('convo-status');
+    } catch { clearStatus('convo-status'); }
+  }
+  showMenu();
+}
+
+function addMsg(type, text, speaker) {
+  const log = document.getElementById('chat-log');
+  const d = document.createElement('div');
+  d.className = 'chat-msg '+type;
+  d.innerHTML = `<div class="speaker">${esc(speaker)}</div>${esc(text)}`;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ─────────────────────────────────────────────
+// PROGRESS SCREEN
+// ─────────────────────────────────────────────
+function showProgress() {
+  showScreen('progress');
+  const d = loadProg(); const words = d.words;
+  const el = document.getElementById('progress-content');
+  if (!Object.keys(words).length) {
+    el.innerHTML = '<div class="card" style="text-align:center;color:var(--text2);">No practice sessions yet.<br>Start with Vocabulary Drill!</div>';
+    return;
+  }
+  const total  = Object.values(words).reduce((s,w)=>s+w.attempts,0);
+  const succ   = Object.values(words).reduce((s,w)=>s+w.successes,0);
+  const avg    = total ? Math.round(succ/total*100) : 0;
+  const now    = Date.now();
+  const due    = Object.values(words).filter(w=>w.nextReview<=now).length;
+
+  el.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="num">${Object.keys(words).length}</div><div class="label">Practiced</div></div>
+      <div class="stat-card"><div class="num">${avg}%</div><div class="label">Avg Success</div></div>
+      <div class="stat-card"><div class="num">${due}</div><div class="label">Due Today</div></div>
+    </div>
+    <div class="card">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px;letter-spacing:.5px;text-transform:uppercase;">Hardest Words</div>
+      <table class="word-table">
+        <thead><tr><th>Spanish</th><th>Success</th><th>Tries</th></tr></thead>
+        <tbody id="ptbody"></tbody>
+      </table>
+    </div>`;
+
+  const rows = Object.entries(words)
+    .filter(([,w])=>w.attempts>=1)
+    .sort(([,a],[,b])=>(a.successes/a.attempts)-(b.successes/b.attempts))
+    .slice(0,15);
+
+  const tbody = document.getElementById('ptbody');
+  for (const [sp, w] of rows) {
+    const r = Math.round(w.successes/w.attempts*100);
+    const cls = r>=70?'green':r>=40?'yellow':'red';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${esc(sp)}</td><td><span class="pill ${cls}">${r}%</span></td><td>${w.attempts}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+(function init() {
+  const saved = localStorage.getItem('spanish_api_key');
+  if (saved) { apiKey = saved; showMenu(); }
+  document.getElementById('api-key-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') setupSave();
+  });
+})();
+</script>
+</body>
+</html>
