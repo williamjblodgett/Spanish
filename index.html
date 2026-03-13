@@ -232,21 +232,47 @@ label { display: block; color: var(--text2); font-size: 12px; margin-bottom: 5px
     <div id="drill-active" style="display:none;">
       <div class="progress-bar"><div class="progress-bar-fill" id="drill-pfill" style="width:0%"></div></div>
       <div class="counter" id="drill-counter"></div>
-      <div class="card">
+
+      <!-- Phase 1: Learn the word -->
+      <div id="drill-phase-word" class="card">
+        <div style="font-size:11px;color:var(--text2);text-align:center;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">Step 1 — Learn the phrase</div>
         <div class="phrase-display">
           <div class="english" id="drill-english"></div>
-          <div class="spanish" id="drill-spanish" style="margin-top:14px;display:none;"></div>
+          <div class="spanish" id="drill-spanish" style="margin-top:14px;display:none;font-size:32px;"></div>
           <div class="note" id="drill-note"></div>
         </div>
         <div id="drill-status" class="status hidden"></div>
         <div class="mini-text" id="drill-heard"></div>
         <div style="text-align:center;min-height:22px;margin:4px 0;" id="drill-result"></div>
         <div class="btn-row">
-          <button class="btn btn-blue" id="drill-btn-hear" onclick="drillHear()">🔊 Hear Spanish</button>
-          <button class="btn" id="drill-btn-speak" onclick="drillSpeak()" disabled>🎤 Repeat</button>
+          <button class="btn btn-blue" id="drill-btn-hear" onclick="drillHear()">🔊 Hear It</button>
+          <button class="btn" id="drill-btn-speak" onclick="drillSpeak()" disabled>🎤 Repeat It</button>
         </div>
         <div class="btn-row" style="margin-top:8px;">
-          <button class="btn btn-primary" id="drill-btn-next" onclick="drillNext()" style="display:none;">Next →</button>
+          <button class="btn btn-primary" id="drill-btn-sentence" onclick="drillGoSentence()" style="display:none;">➡️ Now use it in a sentence</button>
+          <button class="btn" id="drill-btn-skip-sentence" onclick="drillNext()" style="display:none;font-size:12px;color:var(--text2);">Skip sentence</button>
+        </div>
+      </div>
+
+      <!-- Phase 2: Sentence practice -->
+      <div id="drill-phase-sentence" class="card" style="display:none;">
+        <div style="font-size:11px;color:var(--text2);text-align:center;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">Step 2 — Use it in a sentence</div>
+        <div id="drill-sentence-loading" class="mini-text" style="color:var(--purple);">✨ Generating example sentence...</div>
+        <div id="drill-sentence-display" style="display:none;">
+          <div class="phrase-display" style="margin:12px 0;">
+            <div id="drill-sentence-es" style="font-size:20px;font-weight:600;color:var(--text);line-height:1.4;"></div>
+            <div id="drill-sentence-en" style="font-size:14px;color:var(--text2);margin-top:8px;font-style:italic;"></div>
+          </div>
+          <div id="drill-sentence-status" class="status hidden"></div>
+          <div class="mini-text" id="drill-sentence-heard"></div>
+          <div style="text-align:center;min-height:22px;margin:4px 0;" id="drill-sentence-result"></div>
+          <div class="btn-row">
+            <button class="btn btn-blue" id="drill-sentence-btn-hear" onclick="drillSentenceHear()">🔊 Hear Sentence</button>
+            <button class="btn" id="drill-sentence-btn-speak" onclick="drillSentenceSpeak()" disabled>🎤 Say It</button>
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:10px;">
+          <button class="btn btn-primary" id="drill-btn-next" onclick="drillNext()" style="display:none;">Next word →</button>
         </div>
       </div>
     </div>
@@ -499,7 +525,8 @@ Rules:
 // STATE
 // ─────────────────────────────────────────────
 let apiKey = '';
-let drillWords = [], drillIdx = 0, drillCorrect = 0;
+let drillWords = [], drillIdx = 0, drillCorrect = 0, drillPhase = 'word';
+let drillCurrentSentence = null;
 let transWords = [], transIdx = 0,  transCorrect = 0;
 let convoHistory = [];
 
@@ -706,6 +733,8 @@ function drillStart() {
 }
 
 function drillShow() {
+  drillPhase = 'word';
+  drillCurrentSentence = null;
   const w = drillWords[drillIdx];
   document.getElementById('drill-pfill').style.width = (drillIdx/drillWords.length*100)+'%';
   document.getElementById('drill-counter').textContent = `${drillIdx+1} / ${drillWords.length}`;
@@ -717,9 +746,12 @@ function drillShow() {
   document.getElementById('drill-heard').textContent = '';
   document.getElementById('drill-result').innerHTML = '';
   document.getElementById('drill-btn-hear').disabled = false;
-  document.getElementById('drill-btn-hear').textContent = '🔊 Hear Spanish';
+  document.getElementById('drill-btn-hear').textContent = '🔊 Hear It';
   document.getElementById('drill-btn-speak').disabled = true;
-  document.getElementById('drill-btn-next').style.display = 'none';
+  document.getElementById('drill-btn-sentence').style.display = 'none';
+  document.getElementById('drill-btn-skip-sentence').style.display = 'none';
+  document.getElementById('drill-phase-word').style.display = 'block';
+  document.getElementById('drill-phase-sentence').style.display = 'none';
 }
 
 async function drillHear() {
@@ -749,11 +781,78 @@ async function drillSpeak() {
   if (ok) drillCorrect++;
   document.getElementById('drill-result').innerHTML = ok
     ? '<span class="result-badge correct">✓ ¡Correcto!</span>'
-    : `<span class="result-badge incorrect">✗ Answer: ${esc(w.s)}</span>`;
-  if (ok) await speakEN('Great job!');
-  else { await speakEN('Not quite.'); await speakES(w.s); }
-  document.getElementById('drill-btn-next').style.display = 'inline-flex';
+    : `<span class="result-badge incorrect">✗ ${esc(w.s)}</span>`;
+  if (ok) await speakEN('Nice!');
+  else { await speakEN('The phrase is:'); await speakES(w.s); }
+  // Show "use it in a sentence" prompt
+  document.getElementById('drill-btn-sentence').style.display = 'inline-flex';
+  document.getElementById('drill-btn-skip-sentence').style.display = 'inline-flex';
   document.getElementById('drill-btn-hear').disabled = false;
+}
+
+async function drillGoSentence() {
+  drillPhase = 'sentence';
+  document.getElementById('drill-phase-word').style.display = 'none';
+  document.getElementById('drill-phase-sentence').style.display = 'block';
+  document.getElementById('drill-sentence-loading').style.display = 'block';
+  document.getElementById('drill-sentence-display').style.display = 'none';
+  document.getElementById('drill-btn-next').style.display = 'none';
+
+  const w = drillWords[drillIdx];
+  try {
+    const raw = await callClaude([{role:'user', content:
+      `Give one simple example sentence in Mexican Spanish using the phrase "${w.s}".\nRules:\n- 6-12 words total\n- Use casual, everyday language\n- The phrase must appear naturally in context\n- Reply with ONLY two lines:\nLine 1: the Spanish sentence\nLine 2: the English translation`
+    }], null, 120);
+    const lines = raw.trim().split('\n').filter(l=>l.trim());
+    drillCurrentSentence = { es: lines[0]||w.s, en: lines[1]||'' };
+  } catch {
+    drillCurrentSentence = { es: w.s, en: w.e };
+  }
+
+  document.getElementById('drill-sentence-loading').style.display = 'none';
+  document.getElementById('drill-sentence-es').textContent = drillCurrentSentence.es;
+  document.getElementById('drill-sentence-en').textContent = drillCurrentSentence.en;
+  document.getElementById('drill-sentence-display').style.display = 'block';
+  document.getElementById('drill-sentence-status').className = 'status hidden';
+  document.getElementById('drill-sentence-heard').textContent = '';
+  document.getElementById('drill-sentence-result').innerHTML = '';
+  document.getElementById('drill-sentence-btn-hear').disabled = false;
+  document.getElementById('drill-sentence-btn-speak').disabled = true;
+
+  // Auto-play the sentence
+  setStatus('drill-sentence-status','speaking','🔊 Listen...');
+  await speakES(drillCurrentSentence.es);
+  clearStatus('drill-sentence-status');
+  document.getElementById('drill-sentence-btn-speak').disabled = false;
+}
+
+async function drillSentenceHear() {
+  if (!drillCurrentSentence) return;
+  document.getElementById('drill-sentence-btn-hear').disabled = true;
+  setStatus('drill-sentence-status','speaking','🔊 Speaking...');
+  await speakES(drillCurrentSentence.es);
+  clearStatus('drill-sentence-status');
+  document.getElementById('drill-sentence-btn-hear').disabled = false;
+  document.getElementById('drill-sentence-btn-speak').disabled = false;
+}
+
+async function drillSentenceSpeak() {
+  document.getElementById('drill-sentence-btn-speak').disabled = true;
+  document.getElementById('drill-sentence-btn-hear').disabled = true;
+  setStatus('drill-sentence-status','listening','🎤 Listening...');
+  document.getElementById('drill-sentence-btn-speak').classList.add('listening-pulse');
+  const heard = await listen('es-MX', 9000);
+  document.getElementById('drill-sentence-btn-speak').classList.remove('listening-pulse');
+  clearStatus('drill-sentence-status');
+  document.getElementById('drill-sentence-heard').textContent = heard ? `You said: "${heard}"` : 'No speech detected.';
+  const ok = isMatch(heard, drillCurrentSentence.es, 0.55);
+  document.getElementById('drill-sentence-result').innerHTML = ok
+    ? '<span class="result-badge correct">✓ ¡Muy bien!</span>'
+    : `<span class="result-badge incorrect">✗ Keep practicing</span>`;
+  if (ok) await speakEN('Excellent!');
+  else { await speakEN('Good try. The sentence is:'); await speakES(drillCurrentSentence.es); }
+  document.getElementById('drill-btn-next').style.display = 'inline-flex';
+  document.getElementById('drill-sentence-btn-hear').disabled = false;
 }
 
 function drillNext() {
